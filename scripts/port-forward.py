@@ -6,6 +6,11 @@
 разом, не требуя правок в каждом приложении — включая Flatpak-приложения, которые
 не видят переменные окружения хоста.
 
+ВАЖНО про таймауты: у долгих соединений (Telegram long-poll, WebSocket, стримы) бывают
+паузы в десятки секунд. Если оставить у сокета рабочий таймаут, такой поток обрывается
+на первой же паузе — поэтому после установки соединения таймаут снимается (settimeout(None)),
+а ограничение по времени применяется только к самому подключению.
+
 Настройки — константами ниже. Запуск: python3 port-forward.py
 """
 import logging
@@ -17,6 +22,7 @@ LISTEN_HOST = "127.0.0.1"
 LISTEN_PORT = 7890        # порт, на который ходят приложения
 TARGET_HOST = "127.0.0.1"
 TARGET_PORT = 9697        # порт, который реально слушает прокси-клиент
+CONNECT_TIMEOUT = 15      # только на подключение, не на обмен данными
 BUFFER = 65536
 
 logging.basicConfig(level=logging.INFO,
@@ -25,7 +31,7 @@ logging.basicConfig(level=logging.INFO,
 
 
 def pipe(src: socket.socket, dst: socket.socket) -> None:
-    """Перекачка данных в одну сторону; завершает вторую, закрывая сокеты."""
+    """Перекачка данных в одну сторону до закрытия соединения."""
     try:
         while True:
             data = src.recv(BUFFER)
@@ -44,12 +50,17 @@ def pipe(src: socket.socket, dst: socket.socket) -> None:
 
 def handle(client: socket.socket, addr) -> None:
     try:
-        upstream = socket.create_connection((TARGET_HOST, TARGET_PORT), timeout=15)
+        upstream = socket.create_connection((TARGET_HOST, TARGET_PORT),
+                                            timeout=CONNECT_TIMEOUT)
     except OSError as e:
         logging.warning("нет соединения с %s:%s (%s), клиент %s отброшен",
                         TARGET_HOST, TARGET_PORT, e, addr)
         client.close()
         return
+
+    # снимаем таймаут: иначе длинные паузы в обмене (long-poll, стримы) рвут соединение
+    client.settimeout(None)
+    upstream.settimeout(None)
 
     threads = [
         threading.Thread(target=pipe, args=(client, upstream), daemon=True),
@@ -75,7 +86,7 @@ def main() -> int:
         logging.error("не удалось занять %s:%s — %s", LISTEN_HOST, LISTEN_PORT, e)
         return 1
     server.listen(64)
-    logging.info("проброс запущен: %s:%s → %s:%s",
+    logging.info("проброс запущен: %s:%s → %s:%s (таймаут только на подключение)",
                  LISTEN_HOST, LISTEN_PORT, TARGET_HOST, TARGET_PORT)
     try:
         while True:
