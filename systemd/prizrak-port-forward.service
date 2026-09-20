@@ -1,0 +1,14 @@
+[Unit]
+Description=Проброс порта прокси 7890 -> 9697 (Prizrak-Box)
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 %h/port-forward.py
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
