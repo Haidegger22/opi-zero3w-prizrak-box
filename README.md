@@ -228,6 +228,43 @@ SOCKS5, сервер `127.0.0.1`, порт 7890 (или 9697 — после пр
 
 ---
 
+## Часть 8. Автозапуск после перезагрузки
+
+У приложения нет собственного автозапуска, поэтому после включения машины прокси не поднимается
+сам. Запись автозапуска сессии — `autostart/prizrak-box.desktop`; она ведёт на скрипт-обёртку
+из Части 2, поэтому при старте сразу применяются и фикс рендера, и подгонка окна.
+
+```bash
+mkdir -p ~/.config/autostart
+cp autostart/prizrak-box.desktop ~/.config/autostart/
+sed -i "s|<ваш-домашний-каталог>|$HOME|" ~/.config/autostart/prizrak-box.desktop
+grep '^Exec' ~/.config/autostart/prizrak-box.desktop
+```
+
+**Параметры:**
+- `X-MATE-Autostart-Delay=20` — пауза перед запуском, чтобы сессия успела поднять панель и трей
+- `X-MATE-Autostart-enabled=true` — без этой строки MATE считает запись выключенной
+
+Проверка (имитация перезагрузки: полностью гасим приложение и запускаем ровно той командой,
+что записана в автозапуске):
+
+```bash
+pkill -f /usr/bin/<клиент>; sleep 8
+setsid nohup $(grep '^Exec=' ~/.config/autostart/prizrak-box.desktop | cut -d= -f2) &
+sleep 50
+ss -tln | grep -E ':(9697|7890)'                       # ядро и проброс
+curl -s -o /dev/null -w '%{http_code}\n' -x http://127.0.0.1:9697 https://api.telegram.org
+```
+
+Если автозапуск не сработал после реальной перезагрузки, смотрите журнал сессии:
+
+```bash
+grep -i prizrak ~/.xsession-errors
+journalctl --user --since "10 min ago" | grep -i prizrak
+```
+
+---
+
 ## Частые проблемы
 
 | Проблема | Решение |

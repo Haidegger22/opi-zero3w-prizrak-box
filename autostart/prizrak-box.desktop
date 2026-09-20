@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Prizrak-Box
+Comment=Прокси-клиент: запуск с фиксом отрисовки (системный Mesa) и подгонкой окна под экран
+Exec=<ваш-домашний-каталог>/prizrak-launch.sh
+Icon=prizrak-box
+Terminal=false
+X-MATE-Autostart-enabled=true
+X-MATE-Autostart-Delay=20
