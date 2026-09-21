@@ -1,0 +1,10 @@
+[Unit]
+Description=Периодическая проверка правила DeepSeek в Prizrak-Box
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

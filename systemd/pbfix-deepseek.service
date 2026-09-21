@@ -1,0 +1,6 @@
+[Unit]
+Description=Правило «DeepSeek идёт напрямую» в ядре Prizrak-Box
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/pbfix-deepseek.py
